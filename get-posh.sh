@@ -67,15 +67,21 @@ Get_themes () {
 
 View_themes () {
 	Cmd_exists || exit 1
-	if [[ -n "${1}" && -r ~/.poshthemes/${1}.omp.json ]]; then
-		echo -e "\nOh-My-Posh.Style: ${1}"
-		echo -e "$(oh-my-posh --config ~/.poshthemes/${1}.omp.json --shell universal)\n"
-		return
+	local SHELLY='\nFrom: %b\n%s shelly\n'
+	
+	if [ -z "${1}" ]; then 
+		for _style in ~/.poshthemes/*.omp.json; do
+			printf "$SHELLY" "$_style" "$(oh-my-posh --config $_style --shell universal)"
+		done
+	else
+		THEME_VIEW=~/.poshthemes/${1}.omp.json
+		if [ -r "$THEME_VIEW" ]; then
+			printf "$SHELLY" "$THEME_VIEW" "$(oh-my-posh --config $THEME_VIEW --shell universal)"
+		else
+			echo "Theme doesn't exist: $1"
+		fi
 	fi
-
-	for style in ~/.poshthemes/*.omp.json; do
-		echo -e "${style}\n$(oh-my-posh --config $style --shell universal)\n"
-	done
+	echo -e '\nTHANK YOU\nHAVE NICE DAY\n'
 }
 
 Export_posh_theme () {
