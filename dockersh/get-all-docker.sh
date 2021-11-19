@@ -1,27 +1,17 @@
 #!/bin/bash
 
 # get-docker.sh: Setup resources for and download docker
-# TODO why `get.docker.com/.sh` doesn't install containerd.io?
+# TODO Why `get.docker.com/.sh` doesn't install containerd.io?
+# TODO [ `cat /etc/debian_version` != `lsb_release -cs`] ???
 
+VALIDATOR='https://raw.githubusercontent.com/docker/docker/master/contrib/check-config.sh'
 KEY_URL='https://download.docker.com/linux/ubuntu/gpg'
 LOCAL_KEY='/usr/share/keyrings/docker-archive-keyring.gpg'
 DOCKER_SRC='/etc/apt/sources.list.d/docker.list'
 
 Prog_error () {
-	echo $1
+	echo -e "error: $1\n"
 	exit 1
-}
-
-Proceed () {
-	read -p 'Proceed: '
-	case "${REPLY}" in
-		y | yes ) 
-			return 0
-			;;
-		* )
-			exit 1
-			;;
-	esac
 }
 
 Cmd_exists () {
@@ -29,66 +19,95 @@ Cmd_exists () {
 }
 
 Get_dependencies () {
-	# Not sure this is needed?
-	sudo apt-get update -qq > /dev/null
-	sudo apt-get install ca-certificates curl gnupg lsb-release
+	# Not sure this func needed for ubuntu builds?
+	# Aren't these default installs? 
+	sh_c='echo'
+	$sh_c 'sudo apt-get update -qq > /dev/null'
+	$sh_c 'sudo apt-get install ca-certificates curl gnupg lsb-release'
 }
 
 Get_docker_key () {
+	# Get docker GPG key and add to keyring.
 	if [ -e "${LOCAL_KEY}" ]; then
 		echo -e '\nDocker gpg key already exists on this machine\n'
 		return 0
 	fi
-	curl -fsSL $KEY_URL | sudo gpg --dearmor -o $LOCAL_KEY
+	$sh_c "curl -fsSL $KEY_URL | sudo gpg --dearmor -o $LOCAL_KEY"
 }
 
 Get_docker () {
-	# Adds docker upstream repos, downloads 
-	# docker-ce: docker client
-	# docker-ce-cli: docker client command line interface
-	# containerd.io: container abstraction layer
+	# Adds docker upstream source, and installs following;
+	#  docker-ce: docker client
+	#  docker-ce-cli: docker client command line interface
+	#  containerd.io: container abstraction layer
 	if Cmd_exists docker; then
 		Prog_error 'Is docker alread installed on this machine?'
 	fi
 
-	# Include docker upstream sources to /etc/apt/sources.list file
-	# [ `cat /etc/debian_version` != `lsb_release -cs`] ???
-	local DOWNLOAD_URL='https://download.docker.com/linux/ubuntu'
-	local SRC_DOWNLOAD="${DOWNLOAD_URL} $(lsb_release -cs) stable"
+	# Add docker upstream sources to /etc/apt/sources.list.d
+	local SRC_DOWNLOAD="https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 	local APT_REPO="deb [arch=$(dpkg --print-architecture) signed-by=${LOCAL_KEY}] $SRC_DOWNLOAD"
-	echo "$APT_REPO" | sudo tee "$DOCKER_SRC" > /dev/null
+	$sh_c "echo \"$APT_REPO\" | sudo tee $DOCKER_SRC > /dev/null"
 
-	# Quiet update, docker install output not redirected
-	sudo apt-get -y -qq update > /dev/null
-	sudo apt-get install -y -qq docker-ce docker-ce-cli containerd.io
+	# Quiet update; docker install to stdout
+	$sh_c 'sudo apt-get update -y -qq > /dev/null'
+	$sh_c 'sudo apt-get install -y -qq docker-ce docker-ce-cli containerd.io' 
 }
 
 Docker_usergroups () {
-	sudo groupadd docker
-	sudo usermod -aG docker $USER
-	newgrp docker
+	local MADE_CHANGES=
+	if ! grep -qE 'docker' /etc/group; then
+		$sh_c 'sudo groupadd docker' && MADE_CHANGES=1
+	fi
+	if ! id | grep 'docker' > /dev/null; then
+		$sh_c "sudo usermod -aG docker $USER" && MADE_CHANGES=1
+	fi
+	[ $MADE_CHANGES ] && $sh_c 'newgrp docker'
 }
 
-Kernel_compat () {
-	local SCRIPT_URL='https://raw.githubusercontent.com/docker/docker/master/contrib/check-config.sh'
-	cd "${HOME}/bin/rpibash" && {
-		curl -fsSL $SCRIPT_URL -o ./check-config.sh &&
-		chmod 755 ./check-config.sh && 
-		./check-config.sh && 
-		cd -; 
-	} || return 1
+Check_kernel_config () {
+	# Check kernel configuration for docker compatability.
+	# Download script into ~/tmp and remove when finished.
+	# See $VALIDATOR global variable at top.
+	local VSCRIPT='check-config.sh'
+	[ ! -d ~/tmp ] && 
+		{ mkdir ~/tmp || Prog_error 'No ~/tmp!?!'; }
+	
+	cd ~/tmp
+	[ -f $VSCRIPT ] && rm ./$VSCRIPT
+	if curl -fsSL $VALIDATOR -o ./$VSCRIPT; then
+		chmod 755 ./$VSCRIPT && ./$VSCRIPT
+		rm ./$VSCRIPT
+	fi
+	cd - > /dev/null
 }
 
-case "${1}" in
-	--install )
-		echo "Get_docker_key && Get_docker && Docker_usergroups"
-		;;
-	--validate )
-		Kernel_compat
-		;;
-	* ) 
-		Prog_error 'unknown option token'
-		;;
-esac
+Parse_args () {
+	local VALIDATE=
+	while [ -n "$1" ]; do
+		case "$1" in
+			--install )  
+				Get_docker_key && Get_docker && Docker_usergroups 
+				;;
+			--validate )  
+				VALIDATE=1 
+				;;
+			--* )  
+				Prog_error "UnknownToken: $1" 
+				;;
+		esac
+		shift
+	done
+	[ "$VALIDATE" ] && Check_kernel_config
+}
 
+sh_c='echo'
+RUN_LIVE=${RUN_LIVE:-}
+if [ -n "$RUN_LIVE" ]; then
+	#sh_c='sh -c'
+	echo 'RUNNING'
+elif [ -z "$@" ]; then
+	Prog_error 'Null command line input'
+fi
+Parse_args "$@"
 

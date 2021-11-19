@@ -3,6 +3,11 @@ set -e
 
 EXITCODE=0
 
+# THIS IS NOT MY WORK. 
+# THIS IS AUTHORED AND DISTRIBUTED BY THE DOCKER DEVELOPERS.
+# See source at: https://raw.githubusercontent.com/docker/docker/master/contrib/check-config.sh
+
+# NOTE FROM DOCKER DEVS #
 # bits of this were adapted from lxc-checkconfig
 # see also https://github.com/lxc/lxc/blob/lxc-1.0.2/src/lxc/lxc-checkconfig.in
 
