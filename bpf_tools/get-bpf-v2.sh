@@ -43,17 +43,17 @@ Build_bcc_toolchain () {
 		python3-distutils || return 1
 }
 
-Prep_host () {
+Prepare_host () {
 	# Update host and install etckeeper
 	sudo apt-get update -qq > /dev/null
 	sudo apt-get upgrade -qq > /dev/null
 	if ! command -v etckeeper; then
 		sudo apt-get install -y etckeeper
 	fi
+	if apt-cache show amazon-ssm-agent > /dev/null; then
+		sudo dpkg -r amazon-ssm-agent || sudo snap remove amazon-ssm-agent
+	fi
 }
 
-Prep_host && 
-	Build_bcc_toolchain && 
-	Compile_bcc && 
-	Get_bpftrace
+Prepare_host && Build_bcc_toolchain && Compile_bcc && Get_bpftrace
 
