@@ -45,8 +45,8 @@ Build_bcc_toolchain () {
 
 Prepare_host () {
 	# Update host and install etckeeper
-	sudo apt-get update -qq > /dev/null
-	sudo apt-get upgrade -qq > /dev/null
+	sudo apt-get update
+	sudo apt-get upgrade
 	if ! command -v etckeeper; then
 		sudo apt-get install -y etckeeper
 	fi
