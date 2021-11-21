@@ -1,15 +1,25 @@
 #!/bin/bash
 
-# get-bpf-tools.sh: 
+# get-bpf-tools.sh: A script to build base AMI images.
+
+KERNEL_CHECK='https://github.com/iovisor/bpftrace/blob/master/scripts/check_kernel_features.sh'
 
 
 Get_bpftrace () {
-	# Install bpftrace from upstream sources
-	sudo apt-get install -y libbpffcc-dev
+	# Install `bpftrace` from upstream sources.
+	if curl -fsSL $KERNEL_CHECK -o bpf_kern_chk.sh; then
+		chmod 755 bpf_kern_chk.sh
+		./bpf_kern_chk.sh || exit 1
+		rm ./bpf_kern_chk
+	fi
+
+	if ! command -v bpftrace; then
+		sudo apt-get install -y --no-install-recommends bpftrace
+	fi
 }
 
 Compile_bcc () {
-	# Compile BPF Compiler Collection (bcc) from source archive.
+	# Compile `bcc` (BPF Compiler Collection) from source archive.
 	{ git clone https://github.com/iovisor/bcc.git;
 		mkdir bcc/build; 
 		cd bcc/build;
@@ -20,7 +30,7 @@ Compile_bcc () {
 		pushd src/python;
 		make;
 		sudo make install;
-		popd; 
+		popd;
 	} || return 1
 }
 
@@ -45,15 +55,38 @@ Build_bcc_toolchain () {
 
 Prepare_host () {
 	# Update host and install etckeeper
-	sudo apt-get update
-	sudo apt-get upgrade
-	if ! command -v etckeeper; then
-		sudo apt-get install -y etckeeper
-	fi
+	sudo apt-get update -y
+	sudo apt-get upgrade -y
+	sudo apt-get install -y etckeeper
+
 	if apt-cache show amazon-ssm-agent > /dev/null; then
-		sudo dpkg -r amazon-ssm-agent || sudo snap remove amazon-ssm-agent
+		sudo dpkg -r amazon-ssm-agent 
+		sudo snap remove amazon-ssm-agent
 	fi
+
+	# Recommended by bcc installer
+	sudo apt-get install -y arping netperf iperf
+
+	# Get latency heat mapping repo from Brenden Gregg's github.
+	[ ! -d ~/bin ] && mkdir ~/bin
+	cd ~/bin && git clone 'https://github.com/brendangregg/HeatMap.git'
 }
 
-Prepare_host && Build_bcc_toolchain && Compile_bcc && Get_bpftrace
+
+# Perform operations in ~/tmp directory; remove when finished.
+[ ! -d $HOME/tmp ] && { mkdir $HOME/tmp || exit 1; }
+
+if cd ~/tmp; then
+	Check_kernel && 
+		Prepare_host && 
+		Build_bcc_toolchain && 
+		Compile_bcc && 
+		Get_bpftrace
+	cd $HOME
+fi
+
+[ -d $HOME/tmp ] && rm -rf ~/tmp
+
+
+
 
