@@ -67,14 +67,15 @@ Prepare_host () {
 	# Recommended by bcc installer
 	sudo apt-get install -y arping netperf iperf
 
-	# Get latency heat mapping repo from Brenden Gregg's github.
+	# Clone latency heat mapping repo from Brenden Gregg's github.
+        # Clone Flamegraphs from Brenden Greggs github.
 	[ ! -d ~/bin ] && mkdir ~/bin
 	if cd ~/bin; then
 		git clone 'https://github.com/brendangregg/HeatMap.git'
+                git clone 'https://github.com/brendangregg/FlameGraph.git'
 		cd -
 	fi
 }
-
 
 # Perform operations in ~/tmp directory; remove when finished.
 if [ ! -d $HOME/tmp ]; then
@@ -87,6 +88,6 @@ if cd ~/tmp; then
 		Build_bcc_toolchain && 
 		Compile_bcc && 
 		Get_bpftrace
-	rm -rf ./*
+        cd ~/tmp && rm -rf ./*
 fi
 
