@@ -1,12 +1,19 @@
 #!/bin/bash
 
 # ubuntu-docker.sh: Download docker for Ubuntu-20.04.
-
-# Adapted from the script found at "get.docker.com".
+#
+# Install framework adapted from the script found at "get.docker.com".
 # I suggest looking at it before running this script.
 # This only covers Ubuntu-20.04 running on arm64 or x86_64.
-# Debian based so it may cover Kali distros too, no guaruntees.
-# If you run anything else I doubt this will work.
+# Debian friendly commands, so may cover Kali distros, zero guaruntees.
+# Any other distro you should probably run `rsnapshot` first.
+#
+# Kernel configuration check written by Moby project developers.
+# Downloads and executes w/o modifications.
+# Running without root priviliges causes inaccurate output.
+#
+# Moby Project GitHub: https://github.com/moby/moby
+# Script Source: https://github.com/moby/moby/blob/master/contrib/check-config.sh
 
 
 PROGNAME=${0##*/}
@@ -21,31 +28,43 @@ Usage () {
 
 Installer script for host machines running Ubuntu-20.04 LTS (Server)
 
----------------------------------------------------
-usage: $PROGNAME
+usage: 
+  $PROGNAME [ --kernel-check ] 
+  $PROGNAME [ --install [ --quiet ]]
 
  DRY_RUN=1 ./$PROGNAME --install
-  - Run installer script and validate install (see footer).
-  - Performs kernel-check during install.
+  * Perform dry-run install to see commands that will be run.
 
- ./$PROGNAME --install
-  - Perform dry-run install with kernel-check.
-  - If the docker command exists installer exits early.
+ ./$PROGNAME --install [ --quiet ]
+  * Performs kernel-check before install and prompts user to proceed.
+  * Sanity test install with 'docker run -rm hello-world'.
+  * QUIET ENABLED ONLY IF --quiet COMES DIRECTLY AFTER --install.
 
  ./$PROGNAME --kernel-check
-  - Validate kernel config for docker compatability.
-  - Note this runs automatically when docker is installed.
-  - Requires root for the report to print w/o random errors.
+  * Validate kernel config for docker compatability.
+  * Note this runs automatically when docker is installed.
+  * Requires root for the report to print w/o random errors.
 
 ---------------------------------------------------
+* INSTALL WILL FAIL FAST IF DOCKER COMMAND EXISTS *
+---------------------------------------------------
 * INSTALL WILL FAIL FAST WITHOUT ROOT PRIVILIGES *
+---------------------------------------------------
 
-Gaining root can be achieved multiple ways:
- 1) Prefix command with sudo
- 2) $USER belongs to 'sudo' usergroup
- 3) Run in root shell (Use with caution)
+This can be achieved multiple ways:
 
-Alternatively try rootless install if none of the above are allowed.
+1) Prefix command with sudo 
+   * sudo ./$PROGNAME --install
+
+2) User: $USER: is member of 'sudo group'
+   * id -Gn == $USER is member of
+   * id -Gn > $(id -Gn)
+
+3) Run in root shell (Use with caution)
+   * This script uses ~/tmp. Use 'sudo cmd'.
+
+Alternatively try rootless install (corporate/enterprise systems).
+You should have root privileges on your own hardware.
 
 EOF
 exit 1
@@ -63,16 +82,18 @@ exit 1
 }
 
 Docker_exists () {
-    cat <<- "EOF"
+    cat <<- EOF
 
 Please verify docker isn't already installed on this machine.
 
-This can be done with:
+Docker executable @ $(which docker)
+
+This can be checked on the command line with:
    * which docker
    * command -v docker
    * docker --help
 
-Exiting installer
+>>> Halting Install <<<
 
 EOF
 exit 1
@@ -141,17 +162,25 @@ Check_kernel_config () {
 }
 
 Prepare_host () {
+    # Check kernel configuration for compatability with docker engine
+    # Prompt user unless --install flag is followed by --quiet.
     Check_kernel_config 
-    read -p "Proceed with install? "
-    if [[ ! "$REPLY" =~ ^(Y|Yes|yes|y)$ ]]; then
-        echo "Goodbye Friend" && return 1
-    elif Cmd_exists docker; then
-        Docker_exists
+
+    if [[ ! "$1" =~ ^--quiet$ ]]; then
+        read -p "Proceed with install? (y/n): "
+      
+        if [[ ! "$REPLY" =~ ^(Y|Yes|yes|y)$ ]]; then
+            echo "Goodbye Friend" && return 1
+        
+        elif Cmd_exists docker; then
+            Docker_exists
+        fi
     fi
 
     $sh_c 'apt-get update -y'
     $sh_c 'apt-get upgrade -y'
     $sh_c 'apt-get install -y ca-certificates curl gnupg lsb-release'
+
     Get_docker_key && Get_docker && Docker_usergroups
 }
 
@@ -180,10 +209,13 @@ fi
 
 case "$1" in
     --install ) 
-        Prepare_host 
+        shift; Prepare_host "$1"
         ;;
     --kernel-check )
         Check_kernel_config 
+        ;;
+    -h | --help )
+        Usage
         ;;
     --* )
         Prog_error "UnknownToken: $1" 
