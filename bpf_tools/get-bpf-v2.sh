@@ -69,12 +69,17 @@ Prepare_host () {
 
 	# Get latency heat mapping repo from Brenden Gregg's github.
 	[ ! -d ~/bin ] && mkdir ~/bin
-	cd ~/bin && git clone 'https://github.com/brendangregg/HeatMap.git'
+	if cd ~/bin; then
+		git clone 'https://github.com/brendangregg/HeatMap.git'
+		cd -
+	fi
 }
 
 
 # Perform operations in ~/tmp directory; remove when finished.
-[ ! -d $HOME/tmp ] && { mkdir $HOME/tmp || exit 1; }
+if [ ! -d $HOME/tmp ]; then
+	mkdir $HOME/tmp || exit 1
+fi
 
 if cd ~/tmp; then
 	Check_kernel && 
@@ -82,11 +87,6 @@ if cd ~/tmp; then
 		Build_bcc_toolchain && 
 		Compile_bcc && 
 		Get_bpftrace
-	cd $HOME
+	rm -rf ./*
 fi
-
-[ -d $HOME/tmp ] && rm -rf ~/tmp
-
-
-
 

@@ -4,10 +4,31 @@
 # TODO Why `get.docker.com/.sh` doesn't install containerd.io?
 # TODO [ `cat /etc/debian_version` != `lsb_release -cs`] ???
 
+PROGNAME=${0##*/}
 VALIDATOR='https://raw.githubusercontent.com/docker/docker/master/contrib/check-config.sh'
 KEY_URL='https://download.docker.com/linux/ubuntu/gpg'
 LOCAL_KEY='/usr/share/keyrings/docker-archive-keyring.gpg'
 DOCKER_SRC='/etc/apt/sources.list.d/docker.list'
+
+
+Usage () {
+	cat <<- EOF
+
+Installer script for host machines running Ubuntu-20.04 LTS (Server)
+
+Usage:
+
+  $PROGNAME --install )
+    - Run installer script and validate install.
+
+  $PROGNAME --kernel-check )
+    - Validate kernel config for docker compatability.
+	- Note this runs automatically when docker is installed.
+
+EOF
+unset VALIDATOR KEY_URL LOCAL_KEY DOCKER_SRC PROGNAME
+exit 1
+}
 
 Prog_error () {
 	echo -e "error: $1\n"
@@ -21,9 +42,8 @@ Cmd_exists () {
 Get_dependencies () {
 	# Not sure this func needed for ubuntu builds?
 	# Aren't these default installs? 
-	sh_c='echo'
-	$sh_c 'sudo apt-get update -qq > /dev/null'
-	$sh_c 'sudo apt-get install ca-certificates curl gnupg lsb-release'
+	$sh_c 'sudo apt-get update -y > /dev/null'
+	$sh_c 'sudo apt-get install -y ca-certificates curl gnupg lsb-release'
 }
 
 Get_docker_key () {
@@ -50,8 +70,8 @@ Get_docker () {
 	$sh_c "echo \"$APT_REPO\" | sudo tee $DOCKER_SRC > /dev/null"
 
 	# Quiet update; docker install to stdout
-	$sh_c 'sudo apt-get update -y -qq > /dev/null'
-	$sh_c 'sudo apt-get install -y -qq docker-ce docker-ce-cli containerd.io' 
+	$sh_c 'sudo apt-get update -y > /dev/null'
+	$sh_c 'sudo apt-get install -y docker-ce docker-ce-cli containerd.io' 
 }
 
 Docker_usergroups () {
@@ -70,27 +90,27 @@ Check_kernel_config () {
 	# Download script into ~/tmp and remove when finished.
 	# See $VALIDATOR global variable at top.
 	local VSCRIPT='check-config.sh'
-	[ ! -d ~/tmp ] && 
-		{ mkdir ~/tmp || Prog_error 'No ~/tmp!?!'; }
+	[ ! -d ~/tmp ] && { mkdir ~/tmp || Prog_error 'No ~/tmp!?!'; }
 	
 	cd ~/tmp
 	[ -f $VSCRIPT ] && rm ./$VSCRIPT
 	if curl -fsSL $VALIDATOR -o ./$VSCRIPT; then
-		chmod 755 ./$VSCRIPT && ./$VSCRIPT
+		chmod 755 ./$VSCRIPT && sudo ./$VSCRIPT
 		rm ./$VSCRIPT
 	fi
 	cd - > /dev/null
 }
 
 Parse_args () {
-	local VALIDATE=
+	local KERN_CHK=
 	while [ -n "$1" ]; do
 		case "$1" in
-			--install )  
+			--install )
+				KERN_CHK=1
 				Get_docker_key && Get_docker && Docker_usergroups 
 				;;
-			--validate )  
-				VALIDATE=1 
+			--kernel-check )  
+				KERN_CHK=1 
 				;;
 			--* )  
 				Prog_error "UnknownToken: $1" 
@@ -98,7 +118,7 @@ Parse_args () {
 		esac
 		shift
 	done
-	[ "$VALIDATE" ] && Check_kernel_config
+	[ "$KERN_CHK" ] && Check_kernel_config
 }
 
 sh_c='echo'
