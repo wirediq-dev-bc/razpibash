@@ -27,23 +27,22 @@ Usage () {
     cat <<- EOF
 
 Installer script for host machines running Ubuntu-20.04 LTS (Server)
-
 usage: 
-  $PROGNAME [ --kernel-check ] 
-  $PROGNAME [ --install [ --quiet ]]
+  ./$PROGNAME --check-kernel 
+  ./$PROGNAME --install [ --quiet ]
 
- DRY_RUN=1 ./$PROGNAME --install
-  * Perform dry-run install to see commands that will be run.
-
- ./$PROGNAME --install [ --quiet ]
-  * Performs kernel-check before install and prompts user to proceed.
-  * Sanity test install with 'docker run -rm hello-world'.
-  * QUIET ENABLED ONLY IF --quiet COMES DIRECTLY AFTER --install.
-
- ./$PROGNAME --kernel-check
+ $PROGNAME --kernel-check
   * Validate kernel config for docker compatability.
   * Note this runs automatically when docker is installed.
   * Requires root for the report to print w/o random errors.
+
+ DRY_RUN=1 $PROGNAME --install
+  * Perform dry-run install to see commands that will be run.
+
+ $PROGNAME --install [ --quiet ]
+  * Performs kernel-check before install and prompts user to proceed.
+  * QUIET ENABLED ONLY IF [ --quiet ] IS LAST ARGUMENT.
+  * Sanity test install with 'docker run -rm hello-world'.
 
 ---------------------------------------------------
 * INSTALL WILL FAIL FAST IF DOCKER COMMAND EXISTS *
@@ -53,14 +52,14 @@ usage:
 
 This can be achieved multiple ways:
 
-1) Prefix command with sudo 
-   * sudo ./$PROGNAME --install
+1) Prefix command with sudo.
+   * sudo ./$PROGNAME --install [ --quiet ]
 
-2) User: $USER: is member of 'sudo group'
+2) If user($USER) is member of 'sudo group'.
    * id -Gn == $USER is member of
    * id -Gn > $(id -Gn)
 
-3) Run in root shell (Use with caution)
+3) Run in root shell (Use with caution).
    * This script uses ~/tmp. Use 'sudo cmd'.
 
 Alternatively try rootless install (corporate/enterprise systems).
