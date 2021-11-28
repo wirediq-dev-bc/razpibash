@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# shtemplate.sh: Generate basic shell script with 755 permissions
+# bashqwik.sh: Make shell script or curl one from the web. 
+
 
 Usage () {
     PROGNAME="${0##*/}"
     cat <<- EOF
-
 usage: ${PROGNAME%.*} has 2 execution modes
 
 ----- make_script (default) ----- 
@@ -35,7 +35,7 @@ Examples:
 
 ===========================================
 # Note the .sh file extension not required.
-===========================================================
+=======================================================
 # NameRegex:  ^(\\.|\\_)?([[:alnum:]]+|\\-*)+(\\.sh)?$
 
 EOF
