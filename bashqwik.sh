@@ -70,7 +70,7 @@ Mk_file () {
     if $sh_c "set -C; { echo '#!/bin/bash'; echo; } > $QWIK_TMP"; then
         # If `figlet` exists, place one at top of script.
         if command -v figlet > /dev/null; then
-            echo -e "$(figlet -f slant "${FILENAME%.*}")" | 
+            echo -e "$(figlet -t -f smslant "${FILENAME%.*}")" | 
                 sed 's/^/#  /' | 
                 $sh_c "tee -a $QWIK_TMP"
         fi
