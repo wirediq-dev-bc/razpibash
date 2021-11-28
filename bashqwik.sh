@@ -15,17 +15,17 @@ ${PROGNAME} [ -n | --name ] FILENAME [ -p | --perm ] OCTAL
 
 ----- curl_script ----- 
 $PROGNAME --curl CURLS_URL [ -p | --perm ] OCTAL [ -n | --name ] SAVE_AS 
- * Download file from CURLS_URL.
+ * Download file from CURLS_URL and SAVE_AS in cwd.
  * If name omitted only print script to stdout.
 
 =============
 Flag Options:
--C, --curl          Use curl to download a script from the internet.
--n, --name          Save script as <name> or pass 'url' wih --curl to use url tail,
--p, --perms         Set r/w/x permissions. Default 755, octals and modern formats valid.
--q, --quiet-vim     Dont open script in vim after saving.
--d, --dry-run       Echo command calls. Useful when debugging. 
--h, --help          Display this help message and exit.
+ -C, --curl          Use curl to download a script from the internet.
+ -n, --name          Save script as <name> or pass 'url' wih --curl to use url tail,
+ -p, --perms         Set r/w/x permissions. Default 755, octals and modern formats valid.
+ -q, --quiet-vim     Dont open script in vim after saving.
+ -d, --dry-run       Echo command calls. Useful when debugging. 
+ -h, --help          Display this help message and exit.
 
 Examples:
  $PROGNAME bash-script.sh
