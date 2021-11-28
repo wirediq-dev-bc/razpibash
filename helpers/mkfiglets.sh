@@ -11,7 +11,7 @@ Parse_args () {
         case "$iflag" in 
             -i | --inspect )  showfigfonts; exit ;;
             -f | --font )  SET_FONT=" -f $1" ;;
-            -t | --text )  SET_TEXT=" $@" ;;
+            -t | --text )  SET_TEXT=" $@"; break ;;
             * ) echo 'error: cli token'; exit 1 ;; 
         esac
         shift

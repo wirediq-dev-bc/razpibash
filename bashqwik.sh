@@ -6,32 +6,37 @@ Usage () {
     PROGNAME="${0##*/}"
     cat <<- EOF
 
-There are 2 usage modes: 
+usage: ${PROGNAME%.*} has 2 execution modes
 
 ----- make_script (default) ----- 
-
 ${PROGNAME} [ -n | --name ] FILENAME [ -p | --perm ] OCTAL
  * Make bash.sh template FILENAME, with OCTAL permissions
  * FILENAME defaults to 'shtest.sh' for make script.
 
 ----- curl_script ----- 
-
 $PROGNAME --curl CURLS_URL [ -p | --perm ] OCTAL [ -n | --name ] SAVE_AS 
  * Download file from CURLS_URL.
  * If name omitted only print script to stdout.
 
+=============
+Flag Options:
+-C, --curl          Use curl to download a script from the internet.
+-n, --name          Save script as <name> or pass 'url' wih --curl to use url tail,
+-p, --perms         Set r/w/x permissions. Default 755, octals and modern formats valid.
+-q, --quiet-vim     Dont open script in vim after saving.
+-d, --dry-run       Echo command calls. Useful when debugging. 
+-h, --help          Display this help message and exit.
+
 Examples:
- 
- $PROGNAME 
- $PROGNAME script.sh
+ $PROGNAME bash-script.sh
  $PROGNAME -p 600 -n shelly.sh
- $PROGNAME [-n] save-as.sh  --curl https://source-url.com save-as.sh
+ $PROGNAME --curl https://source-url.com [[--name] save-as.sh ]
+ $PROGNAME --quiet-vim -n python-task.sh
 
 ===========================================
 # Note the .sh file extension not required.
 ===========================================================
-# FilenameRegex:  ^(\\.|\\_)?([[:alnum:]]+|\\-*)+(\\.sh)?$
-===========================================================
+# NameRegex:  ^(\\.|\\_)?([[:alnum:]]+|\\-*)+(\\.sh)?$
 
 EOF
 exit 1
