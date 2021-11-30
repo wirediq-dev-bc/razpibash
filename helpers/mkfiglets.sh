@@ -3,34 +3,50 @@
 # mkfiglets.sh: Make figlets
 # also try: toilet -f term -F border --gay
 
+FIGFONT="${FIGFONT:-}"
+
+Usage () {
+    PROGNAME="${0##*/}"
+    cat >&2 <<- EOF
+usage: $PROGNAME [-i|--inspect] [-f|--font [FONT]] [-t|--text] TEXT
+
+Make figlets for scripts with # comment delimiter.
+
+Options:
+ -i, --inspect      Show all figlet FONTS on host machine.
+ -f, --font         Use FONT. Run inspect to see all.
+ -t, --text         Make figlet from TEXT.
+ -h, --help         Show this help message and exit.
+
+EOF
+exit 1
+}
+
 Parse_args () {
-    SET_TEXT=
     local iflag=
     while [ -n "$1" ]; do
         iflag="$1"; shift
         case "$iflag" in 
             -i | --inspect )  showfigfonts; exit ;;
-            -f | --font )  SET_FONT=" -f $1" ;;
-            -t | --text )  SET_TEXT=" $@"; break ;;
-            * ) echo 'error: cli token'; exit 1 ;; 
+            -f | --font )  FIGFONT="$1" ;;
+            -t | --text )  FIGTEXT=" $@"; break ;;
+            -h | --help )  Usage ;;
+            * )  Usage ;; 
         esac
         shift
     done
-    
-    if [ ! "$SET_TEXT" ]; then
-        echo 'error: need text to figlet'
-        exit 1
-    fi
-    
-    # small, standard, slant, smslant, big, block
-    SET_FONT="${SET_FONT:-slant}"
-    { figlet -f $SET_FONT "$SET_TEXT"; echo; } | sed 's/^/# /'
+    [ -z "$FIGTEXT" ] && Usage
 }
 
-if [ -z "$1" ]; then
-    echo 'error: null input'; exit 1
-else
-    Parse_args "$@"
-fi
+Make_figlet () {
+    # small, standard, slant, smslant, big, block
+    FIGFONT="${FIGFONT:-small}"
+    { sh -c "figlet -f $FIGFONT $FIGTEXT"; echo; } | sed 's/^/# /'
+}
 
+[ -z "$1" ] && Usage
+
+FIGTEXT=
+Parse_args "$@"
+Make_figlet
 
