@@ -1,124 +1,145 @@
 #!/bin/bash
 
-# bashqwik.sh: Make shell script or curl one from the web. 
+sh_c='sh -c'
+ECHO=${ECHO:-}
+[ "$ECHO" ] && sh_c='echo'
+
+PERMS="${PERMS:-755}"
+OPEN_VIM=
+CURLS_URL=
+
+FILENAME="${1:-qwik-script}"; shift
 
 
+####
 Usage () {
     PROGNAME="${0##*/}"
     cat <<- EOF
-usage: ${PROGNAME%.*} has 2 execution modes
+usage: ${PROGNAME%.*} FILENAME [OPTIONS]
 
------ make_script (default) ----- 
-${PROGNAME} [ -n | --name ] FILENAME [ -p | --perm ] OCTAL
- * Make bash.sh template FILENAME, with OCTAL permissions
- * FILENAME defaults to 'shtest.sh' for make script.
-
------ curl_script ----- 
-$PROGNAME --curl CURLS_URL [ -p | --perm ] OCTAL [ -n | --name ] SAVE_AS 
- * Download file from CURLS_URL and SAVE_AS in cwd.
- * If name omitted only print script to stdout.
-
-=============
-Flag Options:
- -C, --curl          Use curl to download a script from the internet.
- -n, --name          Save script as <name> or pass 'url' wih --curl to use url tail,
- -p, --perms         Set r/w/x permissions. Default 755, octals and modern formats valid.
- -q, --quiet-vim     Dont open script in vim after saving.
- -d, --dry-run       Echo command calls. Useful when debugging. 
- -h, --help          Display this help message and exit.
+Options:
+ -c, --curl         Use curl to download a script from the internet.
+ -p, --perms        Set r/w/x permissions. Default 755.
+ -q, --vim          Dont open script in vim after saving.
+ -d, --dry-run      Echo command calls. Useful for debugging. 
+ -h, --help         Display this help message and exit.
 
 Examples:
  $PROGNAME bash-script.sh
- $PROGNAME -p 600 -n shelly.sh
- $PROGNAME --curl https://source-url.com [[--name] save-as.sh ]
- $PROGNAME --quiet-vim -n python-task.sh
+ $PROGNAME shelly.sh -p 600
+ $PROGNAME [<save_name>] --curl https://source-url.com
+ $PROGNAME housekeeper.sh --vim
 
-===========================================
-# Note the .sh file extension not required.
-=======================================================
-# NameRegex:  ^(\\.|\\_)?([[:alnum:]]+|\\-*)+(\\.sh)?$
+
+\`$PROGNAME [FILENAME] --curl URL [OPTIONS]\`
+> If name omitted only print script to stdout.
 
 EOF
 exit 1
 }
 
-Curl_file () {
-    # Download and assign permissions to a script.
-    local CURL_STRING="$CURLS_URL"
-    if [ -n "$FILENAME" ]; then
-        if [[ "$FILENAME" =~ ^url$ ]]; then
-            FILENAME="${CURLS_URL##*/}"
-        fi
-        CURL_STRING="$CURLS_URL -o ~/tmp/$FILENAME"
-    fi
-
-    # If not $FILENAME, print curl to stdout w/o saving.
-    if $sh_c "curl -fsSL $CURL_STRING" && [ "$FILENAME" ]; then
-        # If $FILENAME set custom or url slice then proceed.
-        if [ "$FILENAME" ]; then
-            $sh_c "chmod $PERMS ~/tmp/$FILENAME"
-            [ ! -f "$FILENAME" ] && $sh_c "mv ~/tmp/$FILENAME ."
-        fi
-    fi
+Error () {
+    echo -e "error: $1\n" > /dev/stderr
+    exit 1
 }
 
-Mk_file () {
-    # Create bash script template w/ permissions.
-    FILENAME="${FILENAME:-qwik-script}"
-    QWIK_TMP="$HOME/tmp/$FILENAME.$RANDOM.$RANDOM"
+###
+validate_filename () {
+    STD_PATTERN='^(\.|\_)?([[:alnum:]]+|\-*)+(\.sh)?$'
+    PY_PATTERN='^[a-zA-Z]([[:alnum:]]+|\_*)+.py$'
 
-    if $sh_c "set -C; { echo '#!/bin/bash'; echo; } > $QWIK_TMP"; then
-        # If `figlet` exists, place one at top of script.
-        if command -v figlet > /dev/null; then
-            echo -e "$(figlet -t -f small "${FILENAME%.*}")" | 
-                sed 's/^/#  /' | $sh_c "tee -a $QWIK_TMP"
-        fi
-        $sh_c "echo \"\n# $FILENAME: \n\" >> $QWIK_TMP"
-        $sh_c "chmod $PERMS $QWIK_TMP"
-        $sh_c "mv $QWIK_TMP $PWD/$FILENAME"
+    if [ -f "$FILENAME" ]; then
+        Error "$FILENAME: exists!" 
+    elif [[ "$FILENAME" =~ ^.*.py$ ]]; then
+        STD_PATTERN=$PY_PATTERN
     fi
+    
+    regex_filename
 }
 
-Validate_input () {
-    if [[ ! "${FILENAME}" =~ ^(\.|\_)?([[:alnum:]]+|\-*)+(\.sh)?$ ]]; then
-        echo "Filename Regex Failed: $FILENAME"
-        Usage
-    elif [ -f "$FILENAME" ]; then
-        echo 'error: raised: protect-no-clobber'
-        Usage
-    elif [ "$CURLS_URL" ]; then
-        Curl_file
+regex_filename () {
+    if [[ ! "$FILENAME" =~ $STD_PATTERN ]]; then
+        Error "name( '$FILENAME' ) != Regex( '$PATTERN' )"
     else
-        Mk_file
+        return 0
     fi
-
-    [ "$OPEN_VIM" ] && $sh_c "vim $FILENAME"
 }
 
+###
+make_bash () {
+    validate_filename
+    bash_template > $FILENAME
+    set_permissions
+}
 
-if [ ! -d ~/tmp ]; then 
-    mkdir ~/tmp || exit 1301
+bash_template () {
+    cat <<- 'EOF'
+#!/bin/bash
+
+PROGNAME=${0##*/}
+
+#Usage () {
+#    cat >&2 <<- EOF
+#usage: $PROGNAME
+#EOF
+#}
+
+Error () {
+    echo -e "-${PROGNAME%.*} error: $1\n" > /dev/stderr
+    exit 1
+}
+
+EOF
+}
+
+###
+save_curl () {
+    CURLS_URL="$CURLS_URL -o $PWD/$FILENAME"
+    validate_filename
+    run_curl
+    set_permissions
+}
+
+run_curl () {
+    if ! $sh_c "curl -fsSL $CURLS_URL"; then
+        Error 'curl failed'
+    fi
+}
+
+####
+set_permissions () {
+    if ! $sh_c "chmod $PERMS $FILENAME"; then
+        Error 'chmod failed'
+    fi
+}
+
+####
+if [[ "$FILENAME" =~ ^--?c(url)?$ ]]; then
+    CURLS_URL="$1" run_curl; exit
 fi
 
-FILENAME="${FILENAME:-}"
-PERMS="${PERMS:-755}"
-OPEN_VIM=1
-CURLS_URL=
-sh_c='sh -c'
-
+iflag=
 while [ -n "$1" ]; do
-    case "$1" in
-        -C | --curl )  shift; CURLS_URL="$1" ;;
-        -n | --name )  shift; FILENAME="$1" ;;
-        -p | --perms )  shift; PERMS="$1" ;;
-        -d | --dry-run )  sh_c='echo' ;;
-        -q | --quiet-vim )  OPEN_VIM= ;;
-        -h | --help )  Usage ;;
-        -* | --* )  Usage ;;
-        * )  FILENAME="$1" ;;
+    iflag="$1"; shift
+    case "$iflag" in
+        -c | --curl ) CURLS_URL="$1" ;;
+        -p | --perms ) PERMS="$1" ;;
+        -v | --vim ) OPEN_VIM=1; continue;;
+        * )  Usage ;;
     esac
     shift
 done
 
-Validate_input
+
+if [ "$CURLS_URL" ]; then
+    save_curl
+else
+    make_bash
+fi
+
+if [ "$OPEN_VIM" ]; then
+    $sh_c "vim $FILENAME"
+else
+    exit 0
+fi
 
