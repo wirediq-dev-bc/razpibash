@@ -96,7 +96,7 @@ parse_args () {
         case "$1" in
             -c | --curl ) shift; CURLS_URL="$1";;
             -p | --perms ) shift; PERMS="$1";;
-            -v | --vim ) OPEN_VIM=1; continue;;
+            -v | --vim ) OPEN_VIM=1;;
             * )  Usage ;;
         esac
         shift
