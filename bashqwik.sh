@@ -1,7 +1,7 @@
 #!/bin/bash
 
 STD_PATTERN='^(\.|\_)?([[:alnum:]]+|\-*)+(\.sh)?$'
-PY_PATTERN='^[a-zA-Z]([[:alnum:]]+|\_*)+.py$'
+PY_PATTERN='^(\_){0,2}[a-zA-Z]([[:alnum:]]+|\_*)+.py$'
 
 sh_c='sh -c'
 ECHO=${ECHO:-}
