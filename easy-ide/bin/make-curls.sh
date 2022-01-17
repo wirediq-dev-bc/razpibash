@@ -31,7 +31,7 @@ validate_filename () {
 }
 
 run_curl () {
-    if ! $sh_c "curl -fsSL $LINK_URLS"; then
+    if ! $sh_c "curl -L $LINK_URLS"; then
         Error 'curl failed'
     fi
 }

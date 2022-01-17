@@ -1,6 +1,7 @@
 #!/bin/bash
 
 PY_PATTERN='^(\_){0,2}[a-zA-Z]([[:alnum:]]+|\_*)+.py$'
+INIT_PATTERN='^__init__\.py$'
 
 sh_c='sh -c'
 ECHO=${ECHO:-}
@@ -22,28 +23,34 @@ check_filename () {
 }
 
 check_py_regex () {
-    if [[ ! "$FILENAME" =~ $PY_PATTERN ]]; then
-        Error "bad filename: $FILENAME"
+    local PATTERN="$1"
+    if [[ ! "$FILENAME" =~ $PATTERN ]]; then
+        return 1
+    else
+        return 0
     fi
 }
 
+init_file () {
+    touch ./__init__.py
+}
+
 python_template () {
-    cat <<- EOF
-
-def main():
-    pass
-
-if __name__ in "__main__":
-    main()
-
-EOF
+    touch "$FILENAME"
 }
 
 ###
 if [[ "$FILENAME" =~ ^--?h(elp)?$ ]]; then
     Usage
+
+elif check_py_regex "$INIT_PATTERN"; then
+    init_file
+
+elif check_py_regex "$PY_PATTERN"; then
+    python_template
+
 else
-    check_py_regex
-    python_template > "$FILENAME"
+    Error "bad filename: $FILENAME"
+
 fi
 

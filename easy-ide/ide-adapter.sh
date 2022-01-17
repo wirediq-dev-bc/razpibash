@@ -51,8 +51,10 @@ validate_filename () {
 }
 
 ignores_links () {
-    if [ -f "$FILENAME" ]; then
-        Error "$FILENAME: exists!"
+    if [[ ! ${EXECUTE##*/} =~ ^make-links\.sh$ ]]; then
+        if [ -f "$FILENAME" ]; then
+            Error "$FILENAME: exists!"
+        fi
     fi
 }
 
