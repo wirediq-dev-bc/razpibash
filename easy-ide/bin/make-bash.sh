@@ -40,17 +40,18 @@ bash_template () {
     cat <<- 'EOF'
 #!/bin/bash
 
-PROGNAME=${0##*/}
+WHEREAMI=$(readlink -f $0)
+PROGNAME=${WHEREAMI##*/}
 
 sh_c='sh -c'
 ECHO=${ECHO:-}
 [ "$ECHO" ] && sh_c='echo'
 
-Usage () {
+#Usage () {
 #    cat >&2 <<- EOF
 #usage: $PROGNAME
 #EOF
-}
+#}
 
 Error () {
     echo -e "-${PROGNAME%.*} error: $1\n" > /dev/stderr
